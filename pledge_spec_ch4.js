@@ -96,14 +96,14 @@ describe('For a given promiseA (pA)', function(){
 
     // Exceptions cause the returned promise to be rejected with the error.
     // Hint: you will need to use `try` & `catch` to make this work.
-    xit("if pA's success handler throws an error `e`, pB is rejected with `e`", function(){
+    it("if pA's success handler throws an error `e`, pB is rejected with `e`", function(){
       var promiseB = promiseA.then( thisThrowsErr );
       deferralA.resolve();
       expect( promiseB.state ).toBe( 'rejected' );
       expect( promiseB.value ).toBe( 'err' );
     });
 
-    xit("if pA's error handler throws an error `e`, pB is rejected with `e`", function(){
+    it("if pA's error handler throws an error `e`, pB is rejected with `e`", function(){
       var promiseB = promiseA.catch( thisThrowsErr );
       deferralA.reject();
       expect( promiseB.state ).toBe( 'rejected' );
@@ -114,14 +114,17 @@ describe('For a given promiseA (pA)', function(){
     normal value, but then you have to start writing .then inside .then.
     Instead, we want to make promiseB to "become" pZ by copying
     pZ's behavior — aka assimilation. This test is a brain-bender. */
-    xit("if pA's success handler returns promiseZ, pB mimics pZ", function(){
+    it("if pA's success handler returns promiseZ, pB mimics pZ", function(){
       var deferralZ = defer();
       var promiseZ = deferralZ.$promise;
       var promiseB = promiseA.then(function(){
         return promiseZ;
       });
+
       deferralA.resolve();
+      console.log(promiseZ.value, 'before')
       deferralZ.resolve( 'testing' );
+      console.log(promiseZ.value)
       expect( promiseB.value ).toBe( 'testing' );
     });
 

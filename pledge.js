@@ -31,8 +31,14 @@ $Promise.prototype.catch = function (error) {
 $Promise.prototype.execHandlerGroup = function () {
   if(this.state === 'resolved'){
     if(this.handlerGroups[0].successCb !== null) {
-      var result = this.handlerGroups[0].successCb(this.value);
-      this.handlerGroups[0].forwarder.resolve(result);
+      try {
+        var result = this.handlerGroups[0].successCb(this.value);
+        if (result instanceof $Promise) {
+          result.then();
+        } else this.handlerGroups[0].forwarder.resolve(result);
+      } catch (error) {
+        this.handlerGroups[0].forwarder.reject(error);
+      }
       this.handlerGroups.shift();
     }
     else this.handlerGroups.shift().forwarder.resolve(this.value);
@@ -40,8 +46,13 @@ $Promise.prototype.execHandlerGroup = function () {
   }
   if(this.state === 'rejected'){
     if (this.handlerGroups[0].errorCb !== null) {
-      var result = this.handlerGroups[0].errorCb(this.value);
-      this.handlerGroups[0].forwarder.resolve(result);
+      try {
+        var result = this.handlerGroups[0].errorCb(this.value);
+        this.handlerGroups[0].forwarder.resolve(result);
+      } catch (error){
+        this.handlerGroups[0].forwarder.reject(error);
+      }
+
       this.handlerGroups.shift();
     }
     else this.handlerGroups.shift().forwarder.reject(this.value);
@@ -77,9 +88,6 @@ Deferral.prototype.reject = function(reason){
 function defer() {
   return new Deferral;
 }
-
-
-
 
 
 /*-------------------------------------------------------
