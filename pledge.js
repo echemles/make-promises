@@ -12,13 +12,42 @@ var $Promise = function() {
 $Promise.prototype.then = function(success, error){ 
   if(typeof success !== 'function') success = null;
   if(typeof error !== 'function') error = null;
+
   this.handlerGroups.push({
     successCb: success,
-    errorCb: error
+    errorCb: error,
+    forwarder: defer()
   });
-  if(this.state === 'resolved') return this.handlerGroups.shift().successCb(this.value);
-  if(this.state === 'rejected') return this.handlerGroups.shift().errorCb(this.value);
+
+  this.execHandlerGroup();
+  
+  if (this.handlerGroups.length > 0) return this.handlerGroups[this.handlerGroups.length - 1].forwarder.$promise;
 }
+
+$Promise.prototype.catch = function (error) {
+  return this.then(null, error);
+}
+
+$Promise.prototype.execHandlerGroup = function () {
+  if(this.state === 'resolved'){
+    if(this.handlerGroups[0].successCb !== null) {
+      var result = this.handlerGroups[0].successCb(this.value);
+      this.handlerGroups[0].forwarder.resolve(result);
+      this.handlerGroups.shift();
+    }
+    else this.handlerGroups.shift().forwarder.resolve(this.value);
+    
+  }
+  if(this.state === 'rejected'){
+    if (this.handlerGroups[0].errorCb !== null) {
+      var result = this.handlerGroups[0].errorCb(this.value);
+      this.handlerGroups[0].forwarder.resolve(result);
+      this.handlerGroups.shift();
+    }
+    else this.handlerGroups.shift().forwarder.reject(this.value);
+  }
+}
+
 
 var Deferral = function() {
   this.$promise = new $Promise();
@@ -28,8 +57,9 @@ Deferral.prototype.resolve = function(dataObj){
   if(this.$promise.state === 'pending') {
     this.$promise.value = dataObj;
     this.$promise.state = 'resolved';
-    
-  } 
+
+    while (this.$promise.handlerGroups.length > 0) this.$promise.execHandlerGroup();
+  }
 
 }
 
@@ -37,7 +67,11 @@ Deferral.prototype.reject = function(reason){
   if(this.$promise.state === 'pending') {
     this.$promise.value = reason;
     this.$promise.state = 'rejected';
+
+
+    while (this.$promise.handlerGroups.length > 0) this.$promise.execHandlerGroup(); 
   }
+
 }
 
 function defer() {
